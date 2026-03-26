@@ -1,0 +1,48 @@
+{
+  "name": "iflash-messenger",
+  "version": "1.0.2",
+  "main": "main.js",
+  "scripts": {
+    "build": "node build.js",
+    "start": "npm run build && npx serve . --no-clipboard -l 3000",
+    "electron": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "deploy": "npm run build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/local-notifications": "^8.0.2",
+    "@supabase/supabase-js": "^2.100.1",
+    "browser-image-compression": "^2.0.2",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.iflash.messenger",
+    "productName": "IFlash",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "www/**/*",
+      "main.js",
+      "!**/*.map",
+      "!node_modules/.cache",
+      "!build.js",
+      "!package-lock.json",
+      "!*.md"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "www/avat.png"
+    },
+    "portable": {
+      "artifactName": "IFlash.exe"
+    }
+  }
+}
