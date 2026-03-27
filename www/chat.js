@@ -2875,27 +2875,27 @@ const Chat = (() => {
   //  VOICE RECORDING
   // ================================================================
   function toggleVoiceModePicker() {
-    const picker = getEl('voice-mode-picker');
-    if (!picker) return;
-    const isVisible = picker.style.display !== 'none';
+    const bar = getEl('voice-mode-bar');
+    const inputRow = document.querySelector('.input-row');
+    if (!bar || !inputRow) return;
+    const isVisible = bar.style.display !== 'none';
     if (isVisible) {
-      picker.style.display = 'none';
+      hideVoiceModeBar();
     } else {
-      picker.style.display = 'flex';
-      // Close picker when clicking outside
-      const closeHandler = (e) => {
-        if (!picker.contains(e.target) && !getEl('mic-btn').contains(e.target)) {
-          picker.style.display = 'none';
-          document.removeEventListener('click', closeHandler);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closeHandler), 0);
+      bar.style.display = 'flex';
+      inputRow.style.display = 'none';
     }
   }
 
+  function hideVoiceModeBar() {
+    const bar = getEl('voice-mode-bar');
+    const inputRow = document.querySelector('.input-row');
+    if (bar) bar.style.display = 'none';
+    if (inputRow) inputRow.style.display = '';
+  }
+
   async function startVoiceRecording() {
-    const picker = getEl('voice-mode-picker');
-    if (picker) picker.style.display = 'none';
+    hideVoiceModeBar();
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
     try {
       // 24kHz достаточно для голоса, Opus эффективно сжимает речь
@@ -3161,8 +3161,7 @@ const Chat = (() => {
   }
 
   async function startVideoNoteRecording() {
-    const picker = getEl('voice-mode-picker');
-    if (picker) picker.style.display = 'none';
+    hideVoiceModeBar();
     if (vidnoteRecorder && vidnoteRecorder.state === 'recording') return;
     try {
       let stream;
@@ -9326,15 +9325,15 @@ const Chat = (() => {
     const gmReplyPlateHTML = _buildReplyPlateHTML(msg);
 
     if (isMine) {
-      // Своё: справа, без аватара и имени. Реакции — под пузырём (в колонке, выровнены по правому краю)
+      // Своё: справа, без аватара и имени. Реакции — внутри пузыря
       wrapper.innerHTML = `
         <div class="gm-col gm-col-own">
           <div class="gm-bubble gm-bubble-own">
             ${gmReplyPlateHTML}
             ${bodyHTML}
             <div class="gm-meta"><span class="gm-time">${time}</span></div>
+            ${buildReactionBar(msg.id, true)}
           </div>
-          ${buildReactionBar(msg.id, true)}
         </div>`;
     } else {
       // Чужое: слева. Аватарка и имя — только на первом в цепочке
@@ -9352,8 +9351,8 @@ const Chat = (() => {
             ${gmReplyPlateHTML}
             ${bodyHTML}
             <div class="gm-meta"><span class="gm-time">${time}</span></div>
+            ${buildReactionBar(msg.id, false)}
           </div>
-          ${buildReactionBar(msg.id, false)}
         </div>`;
     }
 
@@ -11767,6 +11766,7 @@ const Chat = (() => {
     onVoiceEnded,
     onVidnoteMetaLoaded,
     toggleVoiceModePicker,
+    hideVoiceModeBar,
     toggleEmojiPicker,
     searchEmoji,
     startVideoNoteRecording,

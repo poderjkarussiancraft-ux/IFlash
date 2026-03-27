@@ -3297,6 +3297,11 @@ body > .bg-orb-extra {
    ============================================================ */
 .emoji-btn-main {
   font-size: 18px;
+  display: none !important;
+}
+
+.emoji-picker {
+  display: none !important;
 }
 
 /* Twemoji — картинки-эмодзи */
@@ -3319,7 +3324,7 @@ img.emoji {
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.4);
   z-index: 400;
-  display: flex;
+  display: none;
   flex-direction: column;
   overflow: hidden;
   animation: fadeInScale 0.18s ease;
@@ -4010,9 +4015,8 @@ img.emoji {
   }
 
   /* ── Voice mode picker ── */
-  .voice-mode-picker {
-    right: -4px;
-    min-width: 130px;
+  .voice-mode-bar .vmb-btn span {
+    font-size: 12px;
   }
 
   /* ── Mention popup ── */
@@ -4296,9 +4300,9 @@ img.emoji {
   padding: 0 4px;
   max-width: 75%;
   flex-wrap: wrap;
-  /* По умолчанию скрываем кнопку смайла, показываем при наведении на wrapper */
   position: relative;
 }
+
 
 .message-wrapper:not(:hover) .reaction-quick-trigger {
   opacity: 0;
@@ -9033,51 +9037,74 @@ mark.search-highlight {
 /* ============================================================
    VOICE MODE PICKER (выбор голос/видео)
    ============================================================ */
-.voice-mode-picker {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-  background: var(--bg-glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  backdrop-filter: blur(12px);
-  z-index: 1000;
-  min-width: 120px;
-  margin-bottom: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  animation: slideUpVMP 0.2s ease-out;
-}
-@keyframes slideUpVMP {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.vmp-btn {
+/* ── Inline-панель выбора: голос / видеокружок ── */
+.voice-mode-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
+  animation: vmbFadeIn 0.18s ease-out;
+}
+@keyframes vmbFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.vmb-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  padding: 10px 14px;
   background: var(--bg-hover);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
+  border: 1.5px solid var(--glass-border);
+  border-radius: 12px;
   color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
-.vmp-btn:hover {
-  background: var(--accent-color);
+.vmb-btn:hover {
   border-color: var(--accent-color);
-  color: #fff;
+  background: rgba(var(--accent-rgb, 99,102,241), 0.12);
 }
-.vmp-btn svg {
+.vmb-btn:active {
+  transform: scale(0.97);
+}
+.vmb-voice:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+.vmb-video:hover {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  background: rgba(var(--accent-rgb, 99,102,241), 0.1);
+}
+.vmb-btn svg {
   flex-shrink: 0;
+}
+.vmb-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vmb-cancel:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
 }
 
 /* ============================================================
@@ -10786,19 +10813,15 @@ mark.search-highlight {
    ============================================================ */
 
 .message-wrapper.own .reaction-bar {
-  align-self: flex-end;
-  justify-content: flex-end;
-}
-.message-wrapper.other .reaction-bar {
-  align-self: flex-start;
   justify-content: flex-start;
 }
-.gm-wrapper.gm-own .reaction-bar {
-  align-self: flex-end;
-  justify-content: flex-end;
+.message-wrapper.other .reaction-bar {
+  justify-content: flex-start;
 }
-.gm-wrapper.gm-other .reaction-bar {
-  align-self: flex-start;
+.gm-bubble-own .reaction-bar {
+  justify-content: flex-start;
+}
+.gm-bubble-other .reaction-bar {
   justify-content: flex-start;
 }
 
