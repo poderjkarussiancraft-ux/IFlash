@@ -211,7 +211,7 @@
       </form>
 
       <!-- ===== ВЕРСИЯ НА ЭКРАНЕ АВТОРИЗАЦИИ ===== -->
-      <div class="auth-version">Версия 1.0.2 RELEASE</div>
+      <div class="auth-version">Версия 1.0.3 RELEASE</div>
 
     </div>
   </div>
@@ -540,6 +540,9 @@
                   <circle class="upload-circle-track" cx="22" cy="22" r="18" fill="none" stroke-width="3.5"/>
                   <circle class="upload-circle-arc" cx="22" cy="22" r="18" fill="none" stroke-width="3.5" stroke-linecap="round"/>
                 </svg>
+                <button id="upload-cancel-btn" class="upload-cancel-btn" type="button" title="Отменить загрузку" onclick="Chat.cancelUpload()">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
 
             </div>
@@ -634,7 +637,7 @@
       </nav>
 
       <!-- ===== ВЕРСИЯ В ПАНЕЛИ НАСТРОЕК ===== -->
-      <div class="app-version">Версия 1.0.2 RELEASE</div>
+      <div class="app-version">Версия 1.0.3 RELEASE</div>
 
     </aside>
 
@@ -1313,6 +1316,25 @@
               // Токен обновлён, ничего не делаем
             }
           });
+
+          // Обработка ошибки Refresh Token — перенаправляем на авторизацию
+          const origFetch = window.fetch;
+          window.fetch = async function(...args) {
+            const resp = await origFetch.apply(this, args);
+            if (resp.status === 400 || resp.status === 401) {
+              try {
+                const clone = resp.clone();
+                const body = await clone.json();
+                if (body?.error_description?.includes('Refresh Token') || body?.msg?.includes('Refresh Token')) {
+                  console.warn('[Auth] Refresh token invalid, logging out...');
+                  await window.supabaseClient.auth.signOut();
+                  Chat.cleanup();
+                  showAuth();
+                }
+              } catch {}
+            }
+            return resp;
+          };
 
         } catch (err) {
           console.error('Ошибка инициализации:', err);

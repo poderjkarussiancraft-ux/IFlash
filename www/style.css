@@ -1491,6 +1491,26 @@ body > .bg-orb-extra {
   font-weight: 500;
 }
 
+/* Форматирование в превью диалогов */
+.conv-text strong { font-weight: 700; }
+.conv-text em { font-style: italic; }
+.conv-text del { text-decoration: line-through; opacity: 0.6; }
+.conv-text u { text-decoration: underline; }
+.conv-text code { font-family: monospace; font-size: 12px; background: var(--bg-hover); padding: 0 3px; border-radius: 3px; }
+.conv-text .msg-spoiler {
+  background: var(--text-muted);
+  color: transparent;
+  border-radius: 3px;
+  padding: 0 3px;
+  cursor: default;
+  user-select: none;
+}
+.conv-text .msg-spoiler.revealed {
+  background: var(--bg-hover);
+  color: inherit;
+}
+.conv-text blockquote { display: inline; opacity: 0.7; font-style: italic; }
+
 .unread-badge {
   background: linear-gradient(135deg, #7C6BFF, #a855f7);
   color: white;
@@ -4740,6 +4760,63 @@ img.emoji {
   animation: fadeIn 0.15s ease;
 }
 
+/* ── Sponsor badge: золотой бриллиант ── */
+.sponsor-badge-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  cursor: default;
+  vertical-align: middle;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+.sponsor-badge-svg {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px rgba(245, 185, 60, 0.6));
+  animation: sponsorPulse 2.5s ease-in-out infinite;
+}
+.sponsor-badge-gem {
+  animation: sponsorColorCycle 4s ease-in-out infinite;
+}
+@keyframes sponsorColorCycle {
+  0%   { fill: #F5B93C; }
+  25%  { fill: #FFD700; }
+  50%  { fill: #FFA500; }
+  75%  { fill: #FFD700; }
+  100% { fill: #F5B93C; }
+}
+@keyframes sponsorPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(245,185,60,0.5)); }
+  50%      { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(255,215,0,0.8)); }
+}
+.sponsor-badge-wrap .sponsor-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid #F5B93C;
+  color: #F5B93C;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(245,185,60,0.35);
+  pointer-events: none;
+  z-index: 999;
+}
+.sponsor-badge-wrap:hover .sponsor-tooltip {
+  display: block;
+  animation: fadeIn 0.15s ease;
+}
+
 /* ============================================================
    UPLOAD CIRCLE ANIMATION (Telegram-style)
    ============================================================ */
@@ -4761,6 +4838,28 @@ img.emoji {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+}
+.upload-cancel-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid var(--bg-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  transition: transform 0.15s ease;
+}
+.upload-cancel-btn:hover {
+  transform: scale(1.15);
 }
 
 .upload-circle-svg {
@@ -9247,8 +9346,8 @@ mark.search-highlight {
 
 .vidnote-canvas-wrap {
   position: relative;
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
   overflow: hidden;
   background: #000;
@@ -9436,7 +9535,22 @@ mark.search-highlight {
   font-size: 14px;
   color: var(--text-secondary);
 }
-
+.app-update-btn {
+  margin-top: 8px;
+  padding: 10px 28px;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.app-update-btn:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
 
 .bot-start-panel {
   display: flex;

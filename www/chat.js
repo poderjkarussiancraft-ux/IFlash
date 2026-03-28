@@ -39,12 +39,18 @@ const Chat = (() => {
       });
     }
 
-    // Скрываем адресную строку на мобильных при фокусе на поле ввода
+    // На мобильных при фокусе на поле ввода — скроллим чат вниз и фиксим viewport
     if (_isMobile || _isTablet) {
       document.addEventListener('focusin', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
           setTimeout(() => {
-            e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            // Обновляем --vh чтобы учесть клавиатуру
+            setVH();
+            // Скроллим страницу вверх чтобы input-area не уехала за клавиатуру
+            window.scrollTo(0, 0);
+            // Скроллим сообщения вниз
+            const mc = document.getElementById('messages-container');
+            if (mc) mc.scrollTop = mc.scrollHeight;
           }, 300);
         }
       });
@@ -757,7 +763,7 @@ const Chat = (() => {
   }
 
   // Текущая версия приложения
-  const APP_VERSION = '1.0.2';
+  const APP_VERSION = '1.0.3';
 
   // UID единственного разработчика
   const DEV_UID = 'd63a5c32-8b98-4016-ae29-07a5480c00c0';
@@ -808,6 +814,31 @@ const Chat = (() => {
         <span class="bot-tooltip">🤖 Официальный бот</span>
       </span>
     `;
+  }
+
+  // UID спонсоров
+  const SPONSOR_UIDS = new Set([
+    '6fa63114-bf01-4650-8bd2-02e8d9d6a589',
+  ]);
+
+  // Бейдж спонсора: золотой бриллиант с пульсирующим свечением
+  function sponsorBadgeHTML() {
+    return `
+      <span class="sponsor-badge-wrap" aria-label="Спонсор">
+        <svg class="sponsor-badge-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="sponsor-badge-gem" d="M6 3L2 9L12 21L22 9L18 3H6Z"/>
+          <path d="M2 9H22M12 21L9 9L6 3M12 21L15 9L18 3M9 9H15" stroke="rgba(255,255,255,0.5)" stroke-width="0.8" fill="none"/>
+        </svg>
+        <span class="sponsor-tooltip">💎 Спонсор</span>
+      </span>
+    `;
+  }
+
+  function getUserBadge(profile) {
+    if (profile.id === DEV_UID) return devBadgeHTML();
+    if (SPONSOR_UIDS.has(profile.id)) return sponsorBadgeHTML();
+    if (isBot(profile)) return botBadgeHTML();
+    return '';
   }
 
   function isBot() { return false; }
@@ -1329,7 +1360,7 @@ const Chat = (() => {
       if (hasUsers) {
         html += `<div class="search-results-header">Пользователи</div>`;
         html += searchModeResults.map(profile => {
-          const badge    = profile.id === DEV_UID ? devBadgeHTML() : (isBot(profile) ? botBadgeHTML() : '');
+          const badge    = getUserBadge(profile);
           const isActive = selectedChat && selectedChat.id === profile.id;
           return `
             <div class="conversation-item search-result-item-inline ${isActive ? 'active' : ''}"
@@ -1353,7 +1384,7 @@ const Chat = (() => {
         html += `<div class="search-results-header">Сообщения</div>`;
         html += searchMsgResults.map(({ profile, message }) => {
           const isActive  = selectedChat && selectedChat.id === profile.id;
-          const badge     = profile.id === DEV_UID ? devBadgeHTML() : (isBot(profile) ? botBadgeHTML() : '');
+          const badge     = getUserBadge(profile);
           const snippet   = buildSearchSnippet(message.content, searchCurrentQuery);
           const isMine    = message.sender_id === currentUser.id;
           const timeStr   = formatTime(message.created_at);
@@ -1489,10 +1520,12 @@ const Chat = (() => {
       if (window.Encryption && window.Encryption.isEncrypted(lastText)) {
         lastText = '🔒 Сообщение';
       }
-      const preview = lastText.length > 35 ? lastText.slice(0, 35) + '…' : lastText;
+      // Превью: обрезаем до 35 символов (по сырому тексту), потом форматируем
+      const rawPreview = lastText.length > 35 ? lastText.slice(0, 35) + '…' : lastText;
+      const formattedPreview = formatMessageText(rawPreview.replace(/\n+/g, ' '));
       const isOwn = lastMessage.sender_id === currentUser.id;
 
-      const nameBadge = profile.id === DEV_UID ? devBadgeHTML() : (isBot(profile) ? botBadgeHTML() : '');
+      const nameBadge = getUserBadge(profile);
       // Черновик — показываем вместо превью последнего сообщения
       const draftKey = `user_${profile.id}`;
       const draftText = draftsMap[draftKey];
@@ -1501,9 +1534,9 @@ const Chat = (() => {
         const dp = draftText.length > 32 ? draftText.slice(0, 32) + '…' : draftText;
         previewHTML = `<span class="draft-label">Черновик:</span> ${escapeHTML(dp)}`;
       } else if (isOwn) {
-        previewHTML = `<span class="you-label">Вы: </span><span class="conv-text-own">${escapeHTML(preview)}</span>`;
+        previewHTML = `<span class="you-label">Вы: </span><span class="conv-text-own">${formattedPreview}</span>`;
       } else {
-        previewHTML = `<span class="conv-text-other">${escapeHTML(preview)}</span>`;
+        previewHTML = `<span class="conv-text-other">${formattedPreview}</span>`;
       }
       return `
         <div class="conversation-item ${isActive ? 'active' : ''}" data-user-id="${profile.id}" onclick="Chat.selectConversation('${profile.id}')">
@@ -1847,7 +1880,7 @@ const Chat = (() => {
       <div class="chat-header-user" onclick="Chat.showUserProfile('${profile.id}')" style="cursor:pointer;">
         ${getContactAvatarHTML(profile, 40)}
         <div class="chat-header-info">
-          <span class="chat-header-name">${escapeHTML(getContactDisplayName(profile))}${profile.id === DEV_UID ? devBadgeHTML() : ''}</span>
+          <span class="chat-header-name">${escapeHTML(getContactDisplayName(profile))}${getUserBadge(profile)}</span>
           <span class="chat-header-status status-loading" id="chat-status-${profile.id}">@${escapeHTML(profile.username)}</span>
         </div>
       </div>
@@ -2171,9 +2204,9 @@ const Chat = (() => {
                 <video class="vidnote-video" id="${uid}-video" src="${escapeHTML(msg.file_url)}" preload="metadata" playsinline
                   onloadedmetadata="Chat.onVidnoteMetaLoaded('${uid}')"></video>
                 <svg class="vidnote-ring-svg" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4.5"/>
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4.5" stroke-linecap="round"
-                    stroke-dasharray="289 289" stroke-dashoffset="289" id="${uid}-progress"
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"
+                    stroke-dasharray="301.6 301.6" stroke-dashoffset="301.6" id="${uid}-progress"
                     style="transform:rotate(-90deg);transform-origin:50% 50%;"/>
                 </svg>
                 <div class="vidnote-play-icon" id="${uid}-playicon">
@@ -2843,6 +2876,9 @@ const Chat = (() => {
   // ================================================================
   //  UPLOAD ANIMATION
   // ================================================================
+  let _uploadAbortController = null;
+  let _uploadCancelled = false;
+
   function showUploadIndicator() {
     const ind = getEl('upload-indicator');
     const sendBtn = getEl('send-btn');
@@ -2850,12 +2886,25 @@ const Chat = (() => {
     if (ind) ind.style.display = 'flex';
     if (sendBtn) sendBtn.style.display = 'none';
     if (micBtn) micBtn.style.display = 'none';
+    _uploadCancelled = false;
+    _uploadAbortController = new AbortController();
   }
 
   function hideUploadIndicator() {
     const ind = getEl('upload-indicator');
     if (ind) ind.style.display = 'none';
+    _uploadAbortController = null;
     updateSendBtnVisibility();
+  }
+
+  function cancelUpload() {
+    _uploadCancelled = true;
+    if (_uploadAbortController) {
+      _uploadAbortController.abort();
+      _uploadAbortController = null;
+    }
+    hideUploadIndicator();
+    showToast('Загрузка отменена', 'info');
   }
 
   // ================================================================
@@ -3202,14 +3251,14 @@ const Chat = (() => {
       if (chosenDevice && chosenDevice.deviceId) {
         // Конкретная камера по deviceId
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: chosenDevice.deviceId }, width: { ideal: 640 }, height: { ideal: 640 } },
+          video: { deviceId: { exact: chosenDevice.deviceId }, width: { ideal: 480 }, height: { ideal: 480 } },
           audio: true
         });
       } else {
         // Нет конкретного ID — пробуем любую доступную камеру
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 640 } },
+            video: { width: { ideal: 480 }, height: { ideal: 480 } },
             audio: true
           });
         } catch {
@@ -3226,8 +3275,8 @@ const Chat = (() => {
 
       vidnoteRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 1_000_000,  // 1 Mbps — быстрая загрузка + хорошее качество
-        audioBitsPerSecond: 32_000,     // 32kbps Opus для голоса в видео
+        videoBitsPerSecond: 600_000,   // 600 Kbps — лёгкий файл + хорошее качество для кружка
+        audioBitsPerSecond: 24_000,    // 24kbps Opus для голоса
       });
       vidnoteRecorder.ondataavailable = (e) => { if (e.data.size > 0) vidnoteChunks.push(e.data); };
       vidnoteRecorder.onstop = () => {
@@ -3422,7 +3471,7 @@ const Chat = (() => {
     const video = document.getElementById(uid + '-video');
     if (!video) return;
 
-    const circumference = 289; // 2*π*46
+    const circumference = 301.6; // 2*π*48
 
     // Stop any currently playing vidnote
     if (_currentVidnoteUid && _currentVidnoteUid !== uid) {
@@ -4577,8 +4626,12 @@ const Chat = (() => {
         } else {
           if (savedQueue.length > 0) {
             for (const qItem of savedQueue) {
-              await sendForwardedMessage(item, qItem.msgId, qItem.text, qItem.senderName, qItem.senderId);
+              await sendForwardedMessage(item, qItem.msgId, qItem.text, qItem.senderName, qItem.senderId, true);
             }
+            // Открываем чат/группу один раз после всех сообщений
+            if (item.isGroup && item.group) openGroupChat(item.group);
+            else if (!item.isGroup) await openChatWithUser(item.id);
+            showToast(item.isGroup ? `Переслано в «${item.name}»` : `Переслано пользователю ${item.name}`, 'success');
           } else {
             sendForwardedMessage(item, savedMsgId, savedText);
           }
@@ -4614,7 +4667,7 @@ const Chat = (() => {
   }
 
   // overrideSenderName/overrideSenderId — для пересылки из очереди (уже определены заранее)
-  async function sendForwardedMessage(target, originalMsgId, originalText, overrideSenderName, overrideSenderId) {
+  async function sendForwardedMessage(target, originalMsgId, originalText, overrideSenderName, overrideSenderId, skipOpen) {
     if (!originalText && !originalMsgId) return;
     closeForwardModal();
 
@@ -4654,9 +4707,10 @@ const Chat = (() => {
           sender_id: currentUser.id,
           content: forwardedText
         });
-        showToast(`Переслано в «${target.name}»`, 'success');
-        // Открываем группу
-        if (target.group) openGroupChat(target.group);
+        if (!skipOpen) {
+          showToast(`Переслано в «${target.name}»`, 'success');
+          if (target.group) openGroupChat(target.group);
+        }
       } else {
         // Пересылаем в личный чат
         await window.supabaseClient.from('messages').insert({
@@ -4664,9 +4718,10 @@ const Chat = (() => {
           receiver_id: target.id,
           content: forwardedText
         });
-        showToast(`Переслано пользователю ${target.name}`, 'success');
-        // Открываем чат
-        await openChatWithUser(target.id);
+        if (!skipOpen) {
+          showToast(`Переслано пользователю ${target.name}`, 'success');
+          await openChatWithUser(target.id);
+        }
       }
     } catch (err) {
       showToast('Ошибка при пересылке', 'error');
@@ -4903,6 +4958,7 @@ const Chat = (() => {
         showUploadIndicator();
         const successUploads = [];
         for (let f of filesToSend) {
+          if (_uploadCancelled) break;
           f = await compressImageFile(f);
           if (f.size > MAX_FILE_SIZE) {
             showToast(`${f.name}: файл слишком большой`, 'error');
@@ -4913,11 +4969,13 @@ const Chat = (() => {
           const filePath = `${currentUser.id}/dm_${selectedChat.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
           const { error: uploadError } = await window.supabaseClient.storage
             .from('chat-files').upload(filePath, f, { cacheControl: '3600', upsert: false });
+          if (_uploadCancelled) break;
           if (uploadError) { showToast('Ошибка загрузки файла: ' + uploadError.message, 'error'); continue; }
           const { data: urlData } = window.supabaseClient.storage.from('chat-files').getPublicUrl(filePath);
           successUploads.push({ urlData, f });
         }
         hideUploadIndicator();
+        if (_uploadCancelled) { _uploadCancelled = false; return; }
         for (let i = 0; i < successUploads.length; i++) {
           const { urlData, f } = successUploads[i];
           const isLast = i === successUploads.length - 1;
@@ -5387,9 +5445,9 @@ const Chat = (() => {
 
   // ---- Сжатие видео через canvas + MediaRecorder (VP9) ----
   async function compressVideo(file, progressContainer) {
-    // Сжимаем только mp4/webm/mov если > 5MB
-    if (file.size < 5 * 1024 * 1024) return file;
-    if (!file.type.match(/^video\/(mp4|webm|quicktime|x-matroska|avi)$/i)) return file;
+    // Сжимаем только mp4/webm/mov если > 2MB
+    if (file.size < 2 * 1024 * 1024) return file;
+    if (!file.type.match(/^video\/(mp4|webm|quicktime|x-matroska|avi|3gpp|ogg)$/i)) return file;
 
     const progress = progressContainer ? _showVideoCompressProgress(progressContainer) : null;
 
@@ -5434,9 +5492,12 @@ const Chat = (() => {
             ? 'video/webm;codecs=vp8'
             : 'video/webm';
 
+          // Адаптивный битрейт: чем больше файл, тем агрессивнее сжатие
+          const sizeMB = file.size / (1024 * 1024);
+          const vBitrate = sizeMB > 50 ? 500_000 : sizeMB > 20 ? 600_000 : 800_000;
           const recorder = new MediaRecorder(stream, {
             mimeType,
-            videoBitsPerSecond: 800_000,
+            videoBitsPerSecond: vBitrate,
             audioBitsPerSecond: 48_000,
           });
           const chunks = [];
@@ -5752,7 +5813,7 @@ const Chat = (() => {
         <div class="profile-modal-avatar">
           ${getAvatarHTML(profile, 80)}
         </div>
-        <h2 class="profile-modal-name" style="display:flex;align-items:center;justify-content:center;gap:6px;">${escapeHTML(getDisplayName(profile))}${profile.id === DEV_UID ? devBadgeHTML() : ''}${isABot ? botBadgeHTML() : ''}</h2>
+        <h2 class="profile-modal-name" style="display:flex;align-items:center;justify-content:center;gap:6px;">${escapeHTML(getDisplayName(profile))}${getUserBadge(profile)}</h2>
         <p class="profile-modal-handle">@${escapeHTML(profile.username)}</p>
         <p class="profile-modal-since">Участник с ${memberSince}</p>
       </div>
@@ -6380,7 +6441,7 @@ const Chat = (() => {
         ${getAvatarHTML(currentProfile, 44)}
         <div class="settings-user-info">
           <span class="settings-username" style="display:flex;align-items:center;gap:5px;">
-            ${escapeHTML(displayName)}${currentProfile.id === DEV_UID ? devBadgeHTML() : ''}${isBot(currentProfile) ? botBadgeHTML() : ''}
+            ${escapeHTML(displayName)}${getUserBadge(currentProfile)}
           </span>
           <span style="font-size:12px;color:var(--text-muted);">@${escapeHTML(currentProfile.username)}</span>
         </div>
@@ -6395,7 +6456,7 @@ const Chat = (() => {
         ${getAvatarHTML(currentProfile, 52)}
         <div class="settings-user-info">
           <span class="settings-username" style="display:flex;align-items:center;gap:5px;">
-            ${escapeHTML(displayName)}${currentProfile.id === DEV_UID ? devBadgeHTML() : ''}${isBot(currentProfile) ? botBadgeHTML() : ''}
+            ${escapeHTML(displayName)}${getUserBadge(currentProfile)}
           </span>
           <span style="font-size:12px;color:var(--text-muted);">@${escapeHTML(currentProfile.username)}</span>
         </div>
@@ -6623,9 +6684,10 @@ const Chat = (() => {
       <div class="app-update-banner-inner">
         <div class="app-update-icon">🔄</div>
         <div class="app-update-text">
-          <strong>Версия ${newVersion} RELEASE</strong>
-          <p>Доступна новая версия приложения.<br>Пожалуйста, обновите приложение.</p>
+          <strong>Доступна версия ${newVersion} RELEASE</strong>
+          <p>Ваша версия: ${APP_VERSION}. Обновите для корректной работы.</p>
         </div>
+        <button class="app-update-btn" onclick="location.reload(true)">Обновить</button>
       </div>
     `;
     document.body.appendChild(banner);
@@ -7522,6 +7584,45 @@ const Chat = (() => {
   let swRegistration = null;
 
   async function initPushNotifications() {
+    // ── Capacitor (Android APK): запрос runtime-разрешения на уведомления ──
+    if (_isCapacitor) {
+      try {
+        const { LocalNotifications } = await import('https://cdn.jsdelivr.net/npm/@capacitor/local-notifications/+esm');
+        if (LocalNotifications) {
+          const perm = await LocalNotifications.checkPermissions();
+          if (perm.display === 'prompt' || perm.display === 'prompt-with-rationale') {
+            const result = await LocalNotifications.requestPermissions();
+            console.log('[Capacitor] Notification permission:', result.display);
+          }
+          // Создаём каналы уведомлений для Android
+          try {
+            await LocalNotifications.createChannel({
+              id: 'iflash_messages',
+              name: 'Сообщения',
+              description: 'Уведомления о новых сообщениях',
+              importance: 4,
+              visibility: 1,
+              sound: 'yvedomlenia.mp3',
+              vibration: true,
+            });
+            await LocalNotifications.createChannel({
+              id: 'iflash_calls',
+              name: 'Звонки',
+              description: 'Входящие звонки',
+              importance: 5,
+              visibility: 1,
+              sound: 'ringtone.mp3',
+              vibration: true,
+            });
+          } catch {}
+        }
+      } catch (e) {
+        console.warn('[Capacitor] Notification init error:', e);
+      }
+      return; // На Capacitor не нужен SW
+    }
+
+    // ── Веб / Electron: Service Worker + Web Notifications ──
     if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
 
     try {
@@ -8174,14 +8275,27 @@ const Chat = (() => {
   // ---- Удаление чата (сообщения удаляются, диалог остаётся пустым) ----
   async function convCtxDeleteChat(userId) {
     if (!currentUser) return;
-    try {
-      await window.supabaseClient.from('messages').delete()
-        .eq('sender_id', currentUser.id).eq('receiver_id', userId);
-    } catch (err) { console.error('Ошибка удаления исходящих:', err); }
-    try {
-      await window.supabaseClient.from('messages').delete()
-        .eq('sender_id', userId).eq('receiver_id', currentUser.id);
-    } catch (err) { console.error('Ошибка удаления входящих:', err); }
+    let ok = true;
+    // Удаляем исходящие
+    const { error: e1 } = await window.supabaseClient.from('messages').delete()
+      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`);
+    if (e1) { console.error('Ошибка удаления сообщений:', e1); ok = false; }
+
+    if (!ok) {
+      // Фоллбэк: пробуем двумя запросами
+      try {
+        await window.supabaseClient.from('messages').delete()
+          .eq('sender_id', currentUser.id).eq('receiver_id', userId);
+        await window.supabaseClient.from('messages').delete()
+          .eq('sender_id', userId).eq('receiver_id', currentUser.id);
+        ok = true;
+      } catch (err) { console.error('Ошибка удаления (фоллбэк):', err); }
+    }
+
+    if (!ok) {
+      showToast('Не удалось удалить сообщения из базы', 'error');
+      return;
+    }
 
     // Убираем из черновиков
     delete draftsMap[`user_${userId}`];
@@ -8199,7 +8313,7 @@ const Chat = (() => {
       }
     }
 
-    // Обновляем запись в памяти — очищаем lastMessage, чтобы диалог остался в списке но пустым
+    // Обновляем запись в памяти — очищаем lastMessage
     const convIdx = conversationsList.findIndex(c => c.profile && c.profile.id === userId);
     if (convIdx !== -1) {
       conversationsList[convIdx].lastMessage = { content: '', file_name: null, created_at: conversationsList[convIdx].lastMessage?.created_at || new Date().toISOString() };
@@ -9281,9 +9395,9 @@ const Chat = (() => {
                 <video class="vidnote-video" id="${uid}-video" src="${escapeHTML(msg.file_url)}" preload="metadata" playsinline
                   onloadedmetadata="Chat.onVidnoteMetaLoaded('${uid}')"></video>
                 <svg class="vidnote-ring-svg" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4.5"/>
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="4.5" stroke-linecap="round"
-                    stroke-dasharray="289 289" stroke-dashoffset="289" id="${uid}-progress"
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"
+                    stroke-dasharray="301.6 301.6" stroke-dashoffset="301.6" id="${uid}-progress"
                     style="transform:rotate(-90deg);transform-origin:50% 50%;"/>
                 </svg>
                 <div class="vidnote-play-icon" id="${uid}-playicon">
@@ -11755,6 +11869,7 @@ const Chat = (() => {
     toggleBlockFromHeader,
     toggleBlockFromProfile,
     cancelVoiceRecording,
+    cancelUpload,
     stopVoiceRecording,
     startVoiceRecording,
     sendVoiceMessage,
